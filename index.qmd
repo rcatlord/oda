@@ -1,0 +1,132 @@
+---
+title: "Foreign aid per capita, 2023"
+format: 
+  html:
+    toc: false
+    highlight-style: a11y
+    link-external-newwindow: true
+    embed-resources: true
+    page-layout: full
+execute: 
+  message: false
+  warning: false
+code-annotations: select
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+#| label: load-packages
+#| include: FALSE
+
+library(tidyverse) 
+library(gt)
+```
+
+```{r}
+#| label: load-data
+#| echo: false
+#| file: data.R
+```
+
+```{r}
+#| label: transform-data
+#| echo: FALSE
+
+df <- raw |> 
+  filter(year == 2023, !str_detect(country, "^DAC|^G7")) |> 
+  mutate(rank = min_rank(desc(oda))) |> 
+  filter(rank <= 10 | country %in% c("United Kingdom","United States")) |> 
+  arrange(rank)
+```
+
+@tbl-aid  and @fig-aid show countries that gave the most foreign aid per capita in 2023.
+
+```{r}
+#| label: fig-aid
+#| fig-cap: "Foreign aid given per capita, 2023"
+#| out-width: 70%
+#| fig-format: svg
+#| fig-align: left
+#| fig-alt: "Bar chart showing foreign aid per capita in 2023 for selected countries"
+#| code-fold: true
+
+ggplot(df, # <1>
+  aes(x = oda, y = fct_reorder(country, oda))) + # <2>
+  geom_col(fill = ifelse(df$oda > 1000, "#c51b8a", "gray70")) + # <3>
+  geom_text(aes(label = scales::dollar(round(oda, 0)), # <4>
+                hjust = ifelse(oda > 1000, -0.1, 1.15)), # <5>
+                colour = ifelse(df$oda > 1000, "#000000", "#FFFFFF"), # <6>
+                fontface = "bold") + # <7>
+  scale_x_continuous(expand = expansion()) + # <8>
+  labs( # <9>
+    x = NULL, y = NULL, # <9>
+    title = "Norway gave over $1,000 per capita in foreign aid", # <9>
+    subtitle = "Net official development assistance (ODA) per person ($), 2023", # <9>
+    caption = "Data: OECD (2024); OurWorldinData.org" # <9>
+  ) + # <9>
+  theme_minimal(base_size = 12) + # <10>
+  theme(
+    plot.margin = unit(c(0,1.5,0,0),"cm"), # <11>
+    panel.grid.major.y = element_blank(), # <12>
+    axis.text.x = element_blank(), # <13>
+    plot.title = element_text(size = rel(1.2), face = "bold"), # <14>
+    plot.subtitle = element_text(margin = margin(b = 15)), # <15>
+    plot.caption = element_text(colour = "gray60", margin = margin(t = 20)) # <16>
+  ) +
+  coord_cartesian(clip = "off") # <17>
+```
+
+1. Make ggplot object and supply dataframe.
+2. Map variables to axes and order labels on y-axis by second variable
+3. Add columns with conditional fill
+4. Format column labels as US dollars
+5. Conditionally adjust horizontal placement of column labels
+6. Conditionally colour column labels
+7. Make column labels bold
+8. Reduce gap between y-axis and labels
+9. Add chart title, subtitle and caption
+10. Set theme and chart font size
+11. Ajust plot margins
+12. Remove horizontal gridlines
+13. Remove x-axis labels
+14. Increase size of title and make bold
+15. Increase gap between subtitle and chart
+16. Change caption text colour and reposition
+17. Prevent clipping of column labels
+
+```{r}
+#| label: tbl-aid
+#| tbl-cap: "Foreign aid given per capita, 2023"
+#| code-fold: true
+
+df |> 
+  gt() |> # <1>
+  cols_hide(columns = year) |>  # <2>
+  cols_label(  # <3>
+    country = md("**Country**"), # <3>
+    rank = md("**Rank**"), # <3>
+    oda = md("**ODA (US$)**") # <3>
+  ) |> # <3>
+  fmt_currency(columns = oda, currency = "USD", decimals = 0) |> # <4>   
+  tab_style( # <5>
+    style = list( # <5>
+      cell_text(style = "italic") # <5>
+      ), # <5>
+    locations = cells_body( # <5>
+      columns = c(country,oda,rank), # <5>
+      rows = country %in% c("United Kingdom","United States") # <5>
+    ) # <5>
+  ) |> # <5>
+  tab_options( # <6>
+    table.font.size = px(14), # <6>
+    table.align = "left" # <6>
+  ) # <6>
+```
+
+1. Make a gt table
+2. Hide column
+3. Rename columns and make names bold using Markdown syntax
+4. Format column to show US dollars
+5. Italicise rows that match condition
+6. Fix table font size and align table
